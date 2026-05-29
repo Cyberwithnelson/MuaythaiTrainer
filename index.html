@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MuayThai Mobile</title>
+    <style>
+        :root { --bg: #000; --accent: #39FF14; --rest: #ff3333; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; height: 100vh; margin: 0; touch-action: manipulation; }
+        
+        #timer { font-size: 8rem; font-weight: 900; color: var(--accent); line-height: 1; margin: 10px 0; }
+        #status { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .card { background: #111; padding: 20px; border-radius: 15px; width: 100%; border: 1px solid #333; text-align: center; margin-bottom: 20px; }
+        #instruction { font-size: 1.4rem; font-weight: bold; color: var(--accent); min-height: 70px; }
+        #hint { font-size: 0.95rem; color: #888; margin-top: 10px; }
+        
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+        button { padding: 25px; cursor: pointer; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div id="status">準備就緒</div>
+    <div id="timer">01:00</div>
+    
+    <div class="card">
+        <div id="instruction">準備出擊</div>
+        <div id="hint">師傅：保持專注，隨時準備。</div>
+    </div>
+
+    <div class="controls">
+        <button onclick="startTraining()" style="background:var(--accent); color:black;">開始/繼續</button>
+        <button onclick="pauseTraining()" style="background:#333;">暫停</button>
+        <button onclick="skipCombo()" style="background:#444;">跳過 ⏭</button>
+        <button onclick="resetTimer()" style="background:var(--rest);">重置</button>
+    </div>
+
+    <script>
+        const library = [
+            { c: "右刺拳 → 右側滑步 → 左直拳 → 左低掃", s: "Right jab, side step, left cross, low kick", h: "出左直拳時右腳同步向外踩。" },
+            { c: "右刺拳(引誘) → 左直拳穿透 → 外側旋轉 → 左掃踢", s: "Jab, left cross, pivot, left kick", h: "後手直拳像鞭子一樣抽入去。" },
+            { c: "右勾拳(干擾) → 左上勾拳 → 左低掃", s: "Right hook, left uppercut, low kick", h: "上勾拳穿透對手護頭的縫隙。" },
+            { c: "衝刺刺拳 → 左直拳 → 左膝撞 → 頸箍下壓", s: "Sprint jab, left cross, knee, clinch", h: "膝撞時雙手用力向下扯。" },
+            { c: "假動作低掃 → 右直拳 → 左擺拳 → 左低掃", s: "Feint kick, right cross, left hook, low kick", h: "假踢是為了騙起對手防守。" },
+            { c: "左掃踢(重擊) → 左擺拳 → 右勾拳 → 左低掃", s: "Left kick, left hook, right hook, low kick", h: "掃踢落地後不要停，藉力連擊。" },
+            { c: "閃避後手拳(滑步) → 左直拳反擊 → 左中掃", s: "Slip, left cross counter, middle kick", h: "閃避對手直拳，瞬間反擊。" },
+            { c: "刺拳 → 交叉換架攻擊 → 左後手重擊", s: "Jab, switch stance, left power punch", h: "換架位嗰刻重心要低。" },
+            { c: "刺拳(逼近) → 內圍 → 雙膝撞 → 推開", s: "Jab, clinch, double knee, push", h: "推開時瞄準身體踢一腳。" },
+            { c: "右刺拳 → 後撤步 → 左直拳重擊 → 左高掃", s: "Jab, back step, left cross, high kick", h: "引誘對手追擊，原地反擊。" },
+            { c: "Freestyle: 自由發揮", s: "Freestyle", h: "用直覺組合技術，專注節奏。" }
+        ];
+
+        let usedIndices = [], timeLeft = 60, isTraining = true, interval = null, isRunning = false;
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'en-US';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function updateContent() {
+            if (usedIndices.length === library.length) usedIndices = [];
+            let index;
+            do { index = Math.floor(Math.random() * library.length); } while (usedIndices.includes(index));
+            usedIndices.push(index);
+            const item = library[index];
+            document.getElementById('instruction').innerText = item.c;
+            document.getElementById('hint').innerText = "提示: " + item.h;
+            speak(item.s);
+        }
+
+        function startTraining() {
+            if (isRunning) return;
+            isRunning = true;
+            if (!interval) updateContent();
+            interval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    document.getElementById('timer').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+                } else {
+                    isTraining = !isTraining;
+                    timeLeft = isTraining ? 60 : 30;
+                    document.getElementById('status').innerText = isTraining ? "訓練中" : "休息中";
+                    if (isTraining) updateContent();
+                    else {
+                        document.getElementById('instruction').innerText = "休息時間";
+                        speak("Rest now");
+                    }
+                }
+            }, 1000);
+        }
+
+        function pauseTraining() {
+            isRunning = false;
+            clearInterval(interval);
+            interval = null;
+        }
+
+        function skipCombo() { 
+            timeLeft = 60;
+            document.getElementById('timer').innerText = "01:00";
+            updateContent();
+        }
+
+        function resetTimer() {
+            pauseTraining();
+            timeLeft = 60;
+            usedIndices = [];
+            document.getElementById('timer').innerText = "01:00";
+            document.getElementById('status').innerText = "已重置";
+            document.getElementById('instruction').innerText = "準備出擊";
+        }
+    </script>
+</body>
+</html>
